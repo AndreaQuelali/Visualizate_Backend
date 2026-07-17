@@ -1,0 +1,15 @@
+// This is your Prisma schema file (Prisma v7).
+// Database URL is configured in prisma.config.ts — not here.
+// learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Domain models will be added here as the project evolves.
+// Run `npm run prisma:migrate -- --name init` after adding your first model.

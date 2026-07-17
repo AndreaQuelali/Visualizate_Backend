@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment variables — never commit real secrets
+.env
+
+# Prisma generated client (rebuilt via postinstall / npm run prisma:generate)
+/generated/
+
+# IDE & OS
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+/coverage
