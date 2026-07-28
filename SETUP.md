@@ -12,6 +12,49 @@ Asegúrate de tener instalados los siguientes componentes en tu sistema local:
 2. **PostgreSQL**: Instancia activa local o remota (Puerto: `5432`).
 3. **Redis**: Requerido por BullMQ para manejar colas de trabajos en segundo plano (Puerto: `6379`).
 4. **MinIO** (o AWS S3 local): Requerido por el módulo Storage para almacenar contenido multimedia (Puerto API: `9000`).
+5. **Mailpit**: Servidor SMTP de desarrollo para captura y previsualización de correos en tiempo real (Puerto SMTP: `1025`, Interfaz Web: `http://localhost:8025`).
+
+### 🐋 Iniciar servicios locales con Docker Compose
+
+Puedes levantar todos los servicios requeridos (PostgreSQL, Redis, MinIO y Mailpit) con un solo comando:
+
+```bash
+docker compose up -d
+```
+
+Una vez levantado, accede a la interfaz web de Mailpit en:
+👉 **[http://localhost:8025](http://localhost:8025)**
+
+---
+
+## 📧 Configuración de Correo por Entorno
+
+El servicio de correo se ajusta automáticamente según `NODE_ENV`:
+
+### 1. Desarrollo (`NODE_ENV=development`)
+Utiliza **Mailpit**. Las variables predeterminadas son:
+```env
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM="Visualizate <no-reply@visualizate.local>"
+```
+Todos los correos enviados desde el flujo de registro y recuperación se capturarán en **`http://localhost:8025`**.
+
+### 2. Producción (`NODE_ENV=production`)
+Utiliza **Gmail SMTP** (o cualquier proveedor SMTP). Configura las siguientes variables en tu archivo `.env`:
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=tu_correo@gmail.com
+SMTP_PASS=tu_app_password_de_gmail
+SMTP_FROM="Visualizate <no-reply@tudominio.com>"
+```
+*(Nota: Para Gmail, genera una **Contraseña de aplicación** desde la seguridad de tu cuenta de Google).*
+
 
 ---
 

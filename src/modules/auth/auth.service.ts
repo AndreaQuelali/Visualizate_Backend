@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { MailService } from '../../infrastructure/mail/mail.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -19,6 +20,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -61,9 +63,11 @@ export class AuthService {
       },
     });
 
-    // NOTE: Simulación de envío de correo en los logs.
-    console.log(
-      `[Email Mock] Enlace de verificación enviado a ${email}: /verify-email?token=${token}`,
+    // Envío del correo electrónico de verificación
+    await this.mailService.sendVerificationEmail(
+      user.email,
+      user.fullName,
+      token,
     );
 
     return {
@@ -166,8 +170,11 @@ export class AuthService {
         },
       });
 
-      console.log(
-        `[Email Mock] Enlace de recuperación enviado a ${email}: /new-password?token=${token}`,
+      // Envío del correo electrónico de restablecimiento
+      await this.mailService.sendPasswordResetEmail(
+        user.email,
+        user.fullName,
+        token,
       );
     }
 
