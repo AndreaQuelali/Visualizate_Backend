@@ -32,7 +32,9 @@ Una vez levantado, accede a la interfaz web de Mailpit en:
 El servicio de correo se ajusta automáticamente según `NODE_ENV`:
 
 ### 1. Desarrollo (`NODE_ENV=development`)
+
 Utiliza **Mailpit**. Las variables predeterminadas son:
+
 ```env
 SMTP_HOST=localhost
 SMTP_PORT=1025
@@ -41,10 +43,13 @@ SMTP_USER=
 SMTP_PASS=
 SMTP_FROM="Visualizate <no-reply@visualizate.local>"
 ```
+
 Todos los correos enviados desde el flujo de registro y recuperación se capturarán en **`http://localhost:8025`**.
 
 ### 2. Producción (`NODE_ENV=production`)
+
 Utiliza **Gmail SMTP** (o cualquier proveedor SMTP). Configura las siguientes variables en tu archivo `.env`:
+
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
@@ -53,24 +58,29 @@ SMTP_USER=tu_correo@gmail.com
 SMTP_PASS=tu_app_password_de_gmail
 SMTP_FROM="Visualizate <no-reply@tudominio.com>"
 ```
-*(Nota: Para Gmail, genera una **Contraseña de aplicación** desde la seguridad de tu cuenta de Google).*
 
+_(Nota: Para Gmail, genera una **Contraseña de aplicación** desde la seguridad de tu cuenta de Google)._
 
 ---
 
 ## 🚀 Pasos para Iniciar el Proyecto
 
 ### 1. Clonar el repositorio y navegar
+
 Si es la primera vez, navega a la carpeta correspondiente tras clonar el repositorio:
+
 ```bash
 cd Visualizate_Backend
 ```
 
 ### 2. Instalar dependencias
+
 Instala los paquetes de Node utilizando `npm`:
+
 ```bash
 npm install
 ```
+
 > [!NOTE]
 > Al finalizar la instalación, se ejecutará el script `postinstall` que regenerará automáticamente los tipos del cliente Prisma en tu máquina local.
 
@@ -95,8 +105,9 @@ npm install
 ### 4. Configurar la base de datos (Prisma ORM V7)
 
 El proyecto utiliza **Prisma V7**, el cual incluye cambios importantes respecto a versiones previas. La configuración se separa de la siguiente forma:
-* **CLI (Migraciones)**: Las tareas de línea de comandos leen la URL de base de datos directamente de `prisma.config.ts`.
-* **Runtime**: La aplicación se conecta usando el driver nacional pool y un adaptador (`@prisma/adapter-pg`) inyectado en `PrismaService` mediante variables ambientales de NestJS.
+
+- **CLI (Migraciones)**: Las tareas de línea de comandos leen la URL de base de datos directamente de `prisma.config.ts`.
+- **Runtime**: La aplicación se conecta usando el driver nacional pool y un adaptador (`@prisma/adapter-pg`) inyectado en `PrismaService` mediante variables ambientales de NestJS.
 
 Para crear la estructura inicial en tu base de datos local y sincronizar el cliente:
 
@@ -108,7 +119,7 @@ Para crear la estructura inicial en tu base de datos local y sincronizar el clie
    ```bash
    npm run prisma:generate
    ```
-3. **Aplicar Migraciones Iniciales** *(cuando existan primeros modelos de datos)*:
+3. **Aplicar Migraciones Iniciales** _(cuando existan primeros modelos de datos)_:
    ```bash
    npm run prisma:migrate -- --name nombre_de_la_migracion
    ```
@@ -153,7 +164,9 @@ El repositorio cuenta con estrictos lineamientos automáticos. Antes de hacer co
   ```
 
 ### 🤝 Estructura de Mensajes Commit (Conventional Commits)
+
 Este proyecto valida el formato de tus mensajes de commit usando Commitlint. Tus mensajes deben seguir el siguiente estándar:
-* `feat: ...` para nuevas funcionalidades.
-* `fix: ...` para resolución de bugs.
-* `chore: ...` para mantenimiento o cambios no-operacionales.
+
+- `feat: ...` para nuevas funcionalidades.
+- `fix: ...` para resolución de bugs.
+- `chore: ...` para mantenimiento o cambios no-operacionales.

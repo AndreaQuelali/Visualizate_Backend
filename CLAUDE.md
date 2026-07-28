@@ -55,16 +55,16 @@ El módulo de autenticación completo está implementado. El módulo de render
 
 ## Convenciones de nomenclatura
 
-| Artefacto | Convención | Ejemplo |
-|---|---|---|
-| Módulo NestJS | `kebab-case.module.ts` | `user-profile.module.ts` |
-| Servicio | `kebab-case.service.ts` | `user-profile.service.ts` |
-| Controlador | `kebab-case.controller.ts` | `user-profile.controller.ts` |
-| DTO | `kebab-case.dto.ts` | `create-invoice.dto.ts` |
-| Guard | `kebab-case.guard.ts` | `roles.guard.ts` |
-| Strategy | `kebab-case.strategy.ts` | `google-oauth.strategy.ts` |
-| Tabla Prisma | `snake_case` (`@@map`) | `@@map("user_profiles")` |
-| Campo Prisma | `camelCase` en schema | `fullName`, `passwordHash` |
+| Artefacto     | Convención                 | Ejemplo                      |
+| ------------- | -------------------------- | ---------------------------- |
+| Módulo NestJS | `kebab-case.module.ts`     | `user-profile.module.ts`     |
+| Servicio      | `kebab-case.service.ts`    | `user-profile.service.ts`    |
+| Controlador   | `kebab-case.controller.ts` | `user-profile.controller.ts` |
+| DTO           | `kebab-case.dto.ts`        | `create-invoice.dto.ts`      |
+| Guard         | `kebab-case.guard.ts`      | `roles.guard.ts`             |
+| Strategy      | `kebab-case.strategy.ts`   | `google-oauth.strategy.ts`   |
+| Tabla Prisma  | `snake_case` (`@@map`)     | `@@map("user_profiles")`     |
+| Campo Prisma  | `camelCase` en schema      | `fullName`, `passwordHash`   |
 
 ---
 
@@ -132,10 +132,12 @@ La URL de base de datos se configura en `prisma.config.ts`, **no** en
 ## Correo electrónico
 
 `MailService` ajusta el transporte automáticamente según `NODE_ENV`:
+
 - **development** → Mailpit en `localhost:1025` (UI en `http://localhost:8025`)
 - **production** → SMTP externo configurado vía variables de entorno
 
 Para nuevos tipos de correo, añadir un método a `MailService`:
+
 ```typescript
 async sendWelcomeEmail(to: string, name: string): Promise<void> { ... }
 ```
@@ -154,9 +156,7 @@ módulo nuevo:
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: 'render' }),
-  ],
+  imports: [BullModule.registerQueue({ name: 'render' })],
   // ...
 })
 export class RenderModule {}
