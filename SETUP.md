@@ -1,6 +1,6 @@
-# Guía de Configuración y Arranque — VisualiZate Backend
+# Guía de Configuración y Arranque — Visualizate Backend
 
-Esta guía detalla los pasos que un nuevo desarrollador de backend debe seguir para levantar localmente el entorno de desarrollo del backend del proyecto **VisualiZate**.
+Esta guía detalla los pasos que un nuevo desarrollador de backend debe seguir para levantar localmente el entorno de desarrollo del backend del proyecto **Visualizate**.
 
 ---
 

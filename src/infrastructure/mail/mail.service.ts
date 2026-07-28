@@ -74,9 +74,9 @@ export class MailService {
       </head>
       <body>
         <div class="card">
-          <div class="logo">VisualiZate</div>
+          <div class="logo">Visualizate</div>
           <h2>¡Hola, ${fullName}! 👋</h2>
-          <p>Gracias por registrarte en VisualiZate. Para completar la creación de tu cuenta y acceder a todas las funciones, confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:</p>
+          <p>Gracias por registrarte en Visualizate. Para completar la creación de tu cuenta y acceder a todas las funciones, confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:</p>
           <div class="btn-container">
             <a href="${verifyLink}" target="_blank" class="btn">Verificar mi correo</a>
           </div>
@@ -85,7 +85,7 @@ export class MailService {
           <p>Este enlace expirará en 24 horas.</p>
           <div class="footer">
             Si no creaste esta cuenta, puedes ignorar este mensaje de forma segura.<br>
-            © ${new Date().getFullYear()} VisualiZate. Todos los derechos reservados.
+            © ${new Date().getFullYear()} Visualizate. Todos los derechos reservados.
           </div>
         </div>
       </body>
@@ -96,7 +96,7 @@ export class MailService {
       await this.transporter.sendMail({
         from,
         to,
-        subject: 'Confirma tu correo electrónico - VisualiZate',
+        subject: 'Confirma tu correo electrónico - Visualizate',
         text: `Hola ${fullName}, confirma tu correo ingresando a: ${verifyLink}`,
         html: htmlContent,
       });
@@ -142,9 +142,9 @@ export class MailService {
       </head>
       <body>
         <div class="card">
-          <div class="logo">VisualiZate</div>
+          <div class="logo">Visualizate</div>
           <h2>Restablecimiento de contraseña</h2>
-          <p>Hola ${fullName}, recibimos una solicitud para restablecer la contraseña de tu cuenta en VisualiZate.</p>
+          <p>Hola ${fullName}, recibimos una solicitud para restablecer la contraseña de tu cuenta en Visualizate.</p>
           <p>Para crear una nueva contraseña, haz clic en el botón de abajo:</p>
           <div class="btn-container">
             <a href="${resetLink}" target="_blank" class="btn">Restablecer mi contraseña</a>
@@ -154,7 +154,7 @@ export class MailService {
           <p>Este enlace es válido por 24 horas.</p>
           <div class="footer">
             Si no solicitaste este cambio, puedes ignorar este mensaje y tu contraseña continuará siendo la misma.<br>
-            © ${new Date().getFullYear()} VisualiZate. Todos los derechos reservados.
+            © ${new Date().getFullYear()} Visualizate. Todos los derechos reservados.
           </div>
         </div>
       </body>
@@ -165,7 +165,7 @@ export class MailService {
       await this.transporter.sendMail({
         from,
         to,
-        subject: 'Restablece tu contraseña - VisualiZate',
+        subject: 'Restablece tu contraseña - Visualizate',
         text: `Hola ${fullName}, restablece tu contraseña ingresando a: ${resetLink}`,
         html: htmlContent,
       });
