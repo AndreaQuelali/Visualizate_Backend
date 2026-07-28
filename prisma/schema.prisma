@@ -1,15 +1,48 @@
-// This is your Prisma schema file (Prisma v7).
+// This is your Prisma schema file.
 // Database URL is configured in prisma.config.ts — not here.
 // learn more: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// Domain models will be added here as the project evolves.
-// Run `npm run prisma:migrate -- --name init` after adding your first model.
+model User {
+  id            String               @id @default(uuid())
+  email         String               @unique
+  passwordHash  String
+  fullName      String
+  isVerified    Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  resetTokens   PasswordResetToken[]
+  verifyTokens  VerificationToken[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
