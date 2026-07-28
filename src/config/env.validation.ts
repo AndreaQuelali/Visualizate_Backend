@@ -26,4 +26,12 @@ export const envValidationSchema = Joi.object({
   MINIO_ACCESS_KEY: Joi.string().default('minioadmin'),
   MINIO_SECRET_KEY: Joi.string().default('minioadmin'),
   MINIO_BUCKET: Joi.string().default('visualizate'),
+
+  // SMTP (Mailpit in development / Gmail or custom SMTP in production)
+  SMTP_HOST: Joi.string().default('localhost'),
+  SMTP_PORT: Joi.number().default(1025),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().optional().allow(''),
+  SMTP_PASS: Joi.string().optional().allow(''),
+  SMTP_FROM: Joi.string().default('Visualizate <no-reply@visualizate.local>'),
 });
