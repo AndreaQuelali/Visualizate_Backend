@@ -10,6 +10,18 @@ datasource db {
   provider = "postgresql"
 }
 
+enum WorkspaceRole {
+  ADMIN
+  DESIGNER
+  ORGANIZER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+}
+
 model User {
   id            String               @id @default(uuid())
   email         String               @unique
@@ -20,6 +32,7 @@ model User {
   updatedAt     DateTime             @updatedAt
   resetTokens   PasswordResetToken[]
   verifyTokens  VerificationToken[]
+  memberships   WorkspaceMember[]
 
   @@map("users")
 }
@@ -46,3 +59,43 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model Workspace {
+  id          String                @id @default(uuid())
+  name        String
+  description String?
+  logoUrl     String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  members     WorkspaceMember[]
+  invitations WorkspaceInvitation[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(DESIGNER)
+  joinedAt    DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model WorkspaceInvitation {
+  id          String           @id @default(uuid())
+  workspaceId String
+  email       String
+  role        WorkspaceRole    @default(DESIGNER)
+  status      InvitationStatus @default(PENDING)
+  token       String           @unique
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, email])
+  @@map("workspace_invitations")
+}
