@@ -8,6 +8,7 @@ import { BullModule } from './infrastructure/bull/bull.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RenderModule } from './modules/render/render.module';
+import { WorkspaceModule } from './modules/workspace/workspace.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RenderModule } from './modules/render/render.module';
     BullModule,
     StorageModule,
     AuthModule,
+    WorkspaceModule,
     RenderModule,
   ],
   controllers: [AppController],
