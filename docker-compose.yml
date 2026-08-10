@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: visualizate-postgres
-    restart: always
+    restart: "no"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -15,14 +15,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: visualizate-redis
-    restart: always
+    restart: "no"
     ports:
       - '6380:6379'
 
   minio:
     image: minio/minio:latest
     container_name: visualizate-minio
-    restart: always
+    restart: "no"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -36,7 +36,7 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     container_name: visualizate-mailpit
-    restart: always
+    restart: "no"
     ports:
       - '1025:1025' # Puerto SMTP
       - '8025:8025' # Puerto Web UI
