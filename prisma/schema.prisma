@@ -22,17 +22,29 @@ enum InvitationStatus {
   CANCELLED
 }
 
+enum AssetKind {
+  IMAGE
+  LOGO
+  FONT
+}
+
+enum TemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
-  id            String               @id @default(uuid())
-  email         String               @unique
-  passwordHash  String
-  fullName      String
-  isVerified    Boolean              @default(false)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  resetTokens   PasswordResetToken[]
-  verifyTokens  VerificationToken[]
-  memberships   WorkspaceMember[]
+  id           String               @id @default(uuid())
+  email        String               @unique
+  passwordHash String
+  fullName     String
+  isVerified   Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  resetTokens  PasswordResetToken[]
+  verifyTokens VerificationToken[]
+  memberships  WorkspaceMember[]
 
   @@map("users")
 }
@@ -68,6 +80,9 @@ model Workspace {
   updatedAt   DateTime              @updatedAt
   members     WorkspaceMember[]
   invitations WorkspaceInvitation[]
+  brandKit    BrandKit?
+  assets      Asset[]
+  templates   Template[]
 
   @@map("workspaces")
 }
@@ -98,4 +113,65 @@ model WorkspaceInvitation {
 
   @@index([workspaceId, email])
   @@map("workspace_invitations")
+}
+
+model BrandKit {
+  id          String    @id @default(uuid())
+  workspaceId String    @unique
+  colors      Json      @default("[]")
+  fonts       Json      @default("[]")
+  logoAssetId String?
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("brand_kits")
+}
+
+model Asset {
+  id          String    @id @default(uuid())
+  workspaceId String
+  kind        AssetKind
+  name        String
+  objectKey   String
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  createdById String
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
+  @@map("assets")
+}
+
+model Template {
+  id               String            @id @default(uuid())
+  workspaceId      String
+  name             String
+  description      String?
+  status           TemplateStatus    @default(DRAFT)
+  currentVersionId String?
+  createdById      String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions         TemplateVersion[]
+
+  @@index([workspaceId, status])
+  @@map("templates")
+}
+
+model TemplateVersion {
+  id          String    @id @default(uuid())
+  templateId  String
+  version     Int
+  document    Json
+  publishedAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  template    Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@map("template_versions")
 }
