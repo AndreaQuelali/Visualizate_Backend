@@ -9,6 +9,9 @@ import { StorageModule } from './infrastructure/storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RenderModule } from './modules/render/render.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
+import { BrandModule } from './modules/brand/brand.module';
+import { AssetModule } from './modules/asset/asset.module';
+import { TemplateModule } from './modules/template/template.module';
 
 @Module({
   imports: [
@@ -25,6 +28,9 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     StorageModule,
     AuthModule,
     WorkspaceModule,
+    BrandModule,
+    AssetModule,
+    TemplateModule,
     RenderModule,
   ],
   controllers: [AppController],

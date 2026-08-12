@@ -69,4 +69,25 @@ export class StorageService {
     this.logger.log(`Archivo subido: ${objectName}`);
     return url;
   }
+
+  /** Stores a buffer under an explicit object key. */
+  async putObject(
+    key: string,
+    buffer: Buffer,
+    mimetype: string,
+  ): Promise<void> {
+    await this.ensureBucket();
+    await this.client.putObject(this.bucket, key, buffer, buffer.length, {
+      'Content-Type': mimetype,
+    });
+  }
+
+  async removeObject(key: string): Promise<void> {
+    await this.client.removeObject(this.bucket, key);
+  }
+
+  /** Short-lived signed URL for reading a private object. */
+  async getPresignedUrl(key: string, expirySeconds = 3600): Promise<string> {
+    return this.client.presignedGetObject(this.bucket, key, expirySeconds);
+  }
 }
