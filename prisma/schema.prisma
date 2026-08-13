@@ -28,6 +28,12 @@ enum AssetKind {
   FONT
 }
 
+enum PieceStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
 enum TemplateStatus {
   DRAFT
   PUBLISHED
@@ -83,6 +89,7 @@ model Workspace {
   brandKit    BrandKit?
   assets      Asset[]
   templates   Template[]
+  pieces      Piece[]
 
   @@map("workspaces")
 }
@@ -157,6 +164,7 @@ model Template {
   updatedAt        DateTime          @updatedAt
   workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   versions         TemplateVersion[]
+  pieces           Piece[]
 
   @@index([workspaceId, status])
   @@map("templates")
@@ -171,7 +179,27 @@ model TemplateVersion {
   createdById String
   createdAt   DateTime  @default(now())
   template    Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  pieces      Piece[]
 
   @@unique([templateId, version])
   @@map("template_versions")
+}
+
+model Piece {
+  id                String          @id @default(uuid())
+  workspaceId       String
+  templateId        String
+  templateVersionId String
+  title             String
+  data              Json            @default("{}")
+  status            PieceStatus     @default(DRAFT)
+  createdById       String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template          Template        @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, status])
+  @@map("pieces")
 }
