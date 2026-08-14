@@ -261,7 +261,19 @@ export class TemplateService {
   async remove(workspaceId: string, userId: string, templateId: string) {
     await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     await this.getTemplate(workspaceId, templateId);
-    await this.prisma.template.delete({ where: { id: templateId } });
+    try {
+      await this.prisma.template.delete({ where: { id: templateId } });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'La plantilla tiene piezas creadas. Archívala en lugar de eliminarla',
+        );
+      }
+      throw err;
+    }
     return { message: 'Plantilla eliminada' };
   }
 

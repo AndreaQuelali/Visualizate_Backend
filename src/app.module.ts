@@ -12,6 +12,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
 import { BrandModule } from './modules/brand/brand.module';
 import { AssetModule } from './modules/asset/asset.module';
 import { TemplateModule } from './modules/template/template.module';
+import { PieceModule } from './modules/piece/piece.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TemplateModule } from './modules/template/template.module';
     BrandModule,
     AssetModule,
     TemplateModule,
+    PieceModule,
     RenderModule,
   ],
   controllers: [AppController],
