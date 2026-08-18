@@ -28,6 +28,38 @@ enum AssetKind {
   FONT
 }
 
+enum ReviewStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ReviewCategory {
+  LEGIBILITY
+  COMPOSITION
+  CONTENT
+  BRAND
+}
+
+enum ReviewSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ReviewSource {
+  RULE
+  AI
+}
+
+enum ReviewItemStatus {
+  PENDING
+  APPLIED
+  DISMISSED
+  STALE
+}
+
 enum RenderFormat {
   PNG
   PDF
@@ -91,19 +123,21 @@ model PasswordResetToken {
 }
 
 model Workspace {
-  id          String                @id @default(uuid())
-  name        String
-  description String?
-  logoUrl     String?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
-  members     WorkspaceMember[]
-  invitations WorkspaceInvitation[]
-  brandKit    BrandKit?
-  assets      Asset[]
-  templates   Template[]
-  pieces      Piece[]
-  renderJobs  RenderJob[]
+  id              String                @id @default(uuid())
+  name            String
+  description     String?
+  logoUrl         String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  members         WorkspaceMember[]
+  invitations     WorkspaceInvitation[]
+  brandKit        BrandKit?
+  assets          Asset[]
+  templates       Template[]
+  pieces          Piece[]
+  renderJobs      RenderJob[]
+  reviews         Review[]
+  aiReviewEnabled Boolean               @default(true)
 
   @@map("workspaces")
 }
@@ -206,6 +240,7 @@ model Piece {
   templateVersionId String
   title             String
   data              Json            @default("{}")
+  overrides         Json            @default("{}")
   status            PieceStatus     @default(DRAFT)
   createdById       String
   createdAt         DateTime        @default(now())
@@ -214,6 +249,7 @@ model Piece {
   template          Template        @relation(fields: [templateId], references: [id], onDelete: Restrict)
   templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
   renderJobs        RenderJob[]
+  reviews           Review[]
 
   @@index([workspaceId, status])
   @@map("pieces")
@@ -229,6 +265,7 @@ model RenderJob {
   inputHash         String
   templateVersionId String
   inputData         Json
+  inputOverrides    Json         @default("{}")
   attempts          Int          @default(0)
   errorCode         String?
   errorMessage      String?
@@ -245,4 +282,48 @@ model RenderJob {
   @@index([workspaceId, status])
   @@index([pieceId, inputHash])
   @@map("render_jobs")
+}
+
+model Review {
+  id            String       @id @default(uuid())
+  workspaceId   String
+  pieceId       String
+  status        ReviewStatus @default(QUEUED)
+  aiStatus      String       @default("PENDING")
+  summary       String?
+  model         String?
+  tokensIn      Int?
+  tokensOut     Int?
+  errorMessage  String?
+  snapshotHash  String
+  requestedById String
+  createdAt     DateTime     @default(now())
+  finishedAt    DateTime?
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  piece         Piece        @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  items         ReviewItem[]
+
+  @@index([workspaceId, pieceId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@map("reviews")
+}
+
+model ReviewItem {
+  id          String           @id @default(uuid())
+  reviewId    String
+  category    ReviewCategory
+  severity    ReviewSeverity
+  source      ReviewSource
+  title       String
+  explanation String
+  target      Json?
+  patch       Json?
+  status      ReviewItemStatus @default(PENDING)
+  decidedById String?
+  decidedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  review      Review           @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+  @@map("review_items")
 }
