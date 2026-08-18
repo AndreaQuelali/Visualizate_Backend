@@ -93,7 +93,9 @@ describe('documentToHtml', () => {
     const html = documentToHtml(doc(), { titulo: 'Concierto' }, ctx);
     expect(html).toContain('>Concierto<');
     expect(html).not.toContain('Placeholder');
-    expect(html).toContain('font-family:"Inter", sans-serif');
+    expect(html).toContain('font-family:&quot;Inter&quot;, sans-serif');
+    expect(html).toContain('font-size:40px');
+    expect(html).toContain('font-weight:700');
     expect(html).toContain('text-align:center');
   });
 
@@ -125,6 +127,26 @@ describe('documentToHtml', () => {
     expect(html).toContain('font.woff2');
     expect(html).toContain("default-src 'none'");
     expect(html).toContain('img-src http://minio:9000 data:');
+  });
+
+  it('does not quote CSS generic font families', () => {
+    const d = doc();
+    (d.layers[0] as { fontRef: unknown }).fontRef = { family: 'serif' };
+    const html = documentToHtml(d, { titulo: 'x' }, ctx);
+    expect(html).toContain('font-family:serif');
+    expect(html).not.toContain('&quot;serif&quot;');
+  });
+
+  it('never breaks out of a style attribute (quotes in font names)', () => {
+    const d = doc();
+    (d.layers[0] as { fontRef: unknown }).fontRef = {
+      family: 'Evil" onmouseover="x',
+    };
+    const html = documentToHtml(d, { titulo: 'x' }, ctx);
+    // Every style attribute must close right before ">" or a space.
+    const bad = html.match(/style="[^"]*"[^ >]/g);
+    expect(bad).toBeNull();
+    expect(html).not.toContain('onmouseover="x');
   });
 
   it('falls back to safe values for invalid colors', () => {

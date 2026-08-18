@@ -22,6 +22,8 @@ export interface RenderContext {
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+/** CSS generic families must not be quoted. */
+const GENERIC_FAMILIES = new Set(['sans-serif', 'serif', 'monospace']);
 
 export function escapeHtml(value: string): string {
   return value
@@ -54,7 +56,9 @@ function fontFamily(ref: FontRef, ctx: RenderContext): string {
     'family' in ref
       ? ref.family
       : ctx.brand.fonts.find((f) => f.id === ref.brandFontId)?.family;
-  return family ? `"${cssString(family)}", sans-serif` : 'sans-serif';
+  if (!family) return 'sans-serif';
+  if (GENERIC_FAMILIES.has(family)) return family;
+  return `"${cssString(family)}", sans-serif`;
 }
 
 function boxStyle(layer: Layer): string {
@@ -91,7 +95,7 @@ function textLayer(
     `text-align:${align}`,
     'white-space:pre-wrap;overflow-wrap:anywhere',
   ].join(';');
-  return `<div style="${boxStyle(layer)}"><div style="${style}">${escapeHtml(value)}</div></div>`;
+  return `<div style="${escapeHtml(boxStyle(layer))}"><div style="${escapeHtml(style)}">${escapeHtml(value)}</div></div>`;
 }
 
 function imageLayer(
@@ -105,14 +109,14 @@ function imageLayer(
   const inner = url
     ? `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:${fit};display:block">`
     : '';
-  return `<div style="${boxStyle(layer)}">${inner}</div>`;
+  return `<div style="${escapeHtml(boxStyle(layer))}">${inner}</div>`;
 }
 
 function shapeLayer(layer: ShapeLayer, ctx: RenderContext): string {
   const radius =
     layer.shape === 'ellipse' ? '50%' : `${Math.max(0, num(layer.radius))}px`;
   const style = `${boxStyle(layer)};background-color:${color(layer.fill, ctx)};border-radius:${radius}`;
-  return `<div style="${style}"></div>`;
+  return `<div style="${escapeHtml(style)}"></div>`;
 }
 
 /**
