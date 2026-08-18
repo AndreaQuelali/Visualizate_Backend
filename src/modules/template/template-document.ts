@@ -209,12 +209,19 @@ function checkFields(
 }
 
 /**
+ * 'draft' tolerates work in progress (empty image layers, layers parked
+ * outside the canvas); 'publish' enforces the full rules.
+ */
+export type ValidationMode = 'draft' | 'publish';
+
+/**
  * Validates a TemplateDocument. Returns a list of human-readable errors
  * (empty list = valid). Pure function: all external state comes via `ctx`.
  */
 export function validateTemplateDocument(
   doc: unknown,
   ctx: DocumentContext,
+  mode: ValidationMode = 'publish',
 ): string[] {
   const errors: string[] = [];
   if (!isRec(doc)) return ['El documento debe ser un objeto'];
@@ -277,7 +284,7 @@ export function validateTemplateDocument(
       const h = l.height as number;
       const ix = Math.max(0, Math.min(x + w, cw) - Math.max(x, 0));
       const iy = Math.max(0, Math.min(y + h, ch) - Math.max(y, 0));
-      if (ix * iy < 0.5 * w * h) {
+      if (mode === 'publish' && ix * iy < 0.5 * w * h) {
         errors.push(`${p}: más de la mitad de la capa queda fuera del lienzo`);
       }
     }
@@ -339,7 +346,7 @@ export function validateTemplateDocument(
           if (!isStr(l.assetId) || !ctx.assetIds.has(l.assetId)) {
             errors.push(`${p}.assetId: el asset no existe en este espacio`);
           }
-        } else if (!l.bind) {
+        } else if (!l.bind && mode === 'publish') {
           errors.push(`${p}: una imagen necesita assetId o un campo vinculado`);
         }
         if (boundType && boundType !== 'image') {

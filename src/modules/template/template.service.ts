@@ -15,6 +15,7 @@ import {
   collectAssetIds,
   DocumentContext,
   validateTemplateDocument,
+  ValidationMode,
 } from './template-document';
 import {
   CreateTemplateDto,
@@ -70,7 +71,7 @@ export class TemplateService {
   async create(workspaceId: string, userId: string, dto: CreateTemplateDto) {
     await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const document = dto.document ?? createBlankDocument();
-    await this.assertValid(workspaceId, document);
+    await this.assertValid(workspaceId, document, 'draft');
 
     const templateId = await this.prisma.$transaction(async (tx) => {
       const template = await tx.template.create({
@@ -159,7 +160,7 @@ export class TemplateService {
     if (template.status === TemplateStatus.ARCHIVED) {
       throw new ConflictException('La plantilla está archivada');
     }
-    await this.assertValid(workspaceId, document);
+    await this.assertValid(workspaceId, document, 'draft');
 
     const latest = await this.latestVersion(templateId);
     const json = document as Prisma.InputJsonValue;
@@ -211,7 +212,7 @@ export class TemplateService {
     if (!latest || latest.publishedAt !== null) {
       throw new BadRequestException('No hay cambios por publicar');
     }
-    await this.assertValid(workspaceId, latest.document);
+    await this.assertValid(workspaceId, latest.document, 'publish');
 
     await this.prisma.$transaction([
       this.prisma.templateVersion.update({
@@ -294,9 +295,13 @@ export class TemplateService {
     });
   }
 
-  private async assertValid(workspaceId: string, document: unknown) {
+  private async assertValid(
+    workspaceId: string,
+    document: unknown,
+    mode: ValidationMode,
+  ) {
     const ctx = await this.buildContext(workspaceId, document);
-    const errors = validateTemplateDocument(document, ctx);
+    const errors = validateTemplateDocument(document, ctx, mode);
     if (errors.length > 0) {
       throw new BadRequestException({
         statusCode: 400,
