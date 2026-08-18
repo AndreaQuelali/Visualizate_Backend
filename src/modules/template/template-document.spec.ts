@@ -115,6 +115,36 @@ describe('validateTemplateDocument', () => {
     );
   });
 
+  it('tolerates work in progress in drafts but not when publishing', () => {
+    const doc = valid();
+    // An image layer with no asset and no bound field, and a layer parked
+    // outside the canvas.
+    doc.layers[1] = {
+      id: 'l2',
+      type: 'image',
+      name: 'Foto',
+      x: 0,
+      y: 200,
+      width: 400,
+      height: 300,
+      fit: 'cover',
+    };
+    doc.layers[0].x = 5000;
+
+    expect(validateTemplateDocument(doc, ctx, 'draft')).toEqual([]);
+    const errors = validateTemplateDocument(doc, ctx, 'publish').join('|');
+    expect(errors).toContain('una imagen necesita');
+    expect(errors).toContain('fuera del lienzo');
+  });
+
+  it('keeps rejecting broken references even in drafts', () => {
+    const doc = valid();
+    doc.layers[0].bind = { fieldKey: 'no_existe' };
+    doc.canvas.background = { brandColorId: 'x' };
+    const errors = validateTemplateDocument(doc, ctx, 'draft');
+    expect(errors.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('rejects out-of-range canvas size and non-objects', () => {
     const doc = valid();
     doc.canvas.width = 50;

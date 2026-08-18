@@ -27,6 +27,12 @@ export const envValidationSchema = Joi.object({
   MINIO_SECRET_KEY: Joi.string().default('minioadmin'),
   MINIO_BUCKET: Joi.string().default('visualizate'),
 
+  // Render (PNG/PDF export)
+  RENDER_CONCURRENCY: Joi.number().integer().min(1).max(8).default(2),
+  RENDER_RETENTION_DAYS: Joi.number().integer().min(1).default(30),
+  RENDER_MAX_ACTIVE: Joi.number().integer().min(1).default(3),
+  RENDER_MAX_PER_HOUR: Joi.number().integer().min(1).default(20),
+
   // SMTP (Mailpit in development / Gmail or custom SMTP in production)
   SMTP_HOST: Joi.string().default('localhost'),
   SMTP_PORT: Joi.number().default(1025),

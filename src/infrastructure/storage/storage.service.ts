@@ -86,8 +86,26 @@ export class StorageService {
     await this.client.removeObject(this.bucket, key);
   }
 
-  /** Short-lived signed URL for reading a private object. */
-  async getPresignedUrl(key: string, expirySeconds = 3600): Promise<string> {
-    return this.client.presignedGetObject(this.bucket, key, expirySeconds);
+  /**
+   * Short-lived signed URL for reading a private object.
+   * `responseHeaders` lets the caller force e.g. a download filename.
+   */
+  async getPresignedUrl(
+    key: string,
+    expirySeconds = 3600,
+    responseHeaders?: Record<string, string>,
+  ): Promise<string> {
+    return this.client.presignedGetObject(
+      this.bucket,
+      key,
+      expirySeconds,
+      responseHeaders,
+    );
+  }
+
+  /** Origin (scheme://host:port) that signed URLs point to. */
+  getOrigin(): string {
+    const protocol = this.config.useSSL ? 'https' : 'http';
+    return `${protocol}://${this.config.endPoint}:${this.config.port}`;
   }
 }

@@ -28,6 +28,19 @@ enum AssetKind {
   FONT
 }
 
+enum RenderFormat {
+  PNG
+  PDF
+}
+
+enum RenderStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
 enum PieceStatus {
   DRAFT
   READY
@@ -90,6 +103,7 @@ model Workspace {
   assets      Asset[]
   templates   Template[]
   pieces      Piece[]
+  renderJobs  RenderJob[]
 
   @@map("workspaces")
 }
@@ -199,7 +213,36 @@ model Piece {
   workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   template          Template        @relation(fields: [templateId], references: [id], onDelete: Restrict)
   templateVersion   TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  renderJobs        RenderJob[]
 
   @@index([workspaceId, status])
   @@map("pieces")
+}
+
+model RenderJob {
+  id                String       @id @default(uuid())
+  workspaceId       String
+  pieceId           String
+  format            RenderFormat
+  scale             Float        @default(1)
+  status            RenderStatus @default(QUEUED)
+  inputHash         String
+  templateVersionId String
+  inputData         Json
+  attempts          Int          @default(0)
+  errorCode         String?
+  errorMessage      String?
+  outputObjectKey   String?
+  outputBytes       Int?
+  durationMs        Int?
+  requestedById     String
+  createdAt         DateTime     @default(now())
+  finishedAt        DateTime?
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  piece             Piece        @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, pieceId, createdAt])
+  @@index([workspaceId, status])
+  @@index([pieceId, inputHash])
+  @@map("render_jobs")
 }
