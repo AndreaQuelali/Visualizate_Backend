@@ -33,6 +33,14 @@ export const envValidationSchema = Joi.object({
   RENDER_MAX_ACTIVE: Joi.number().integer().min(1).default(3),
   RENDER_MAX_PER_HOUR: Joi.number().integer().min(1).default(20),
 
+  // AI review (OpenAI). Without a key only the automatic rules run.
+  OPENAI_API_KEY: Joi.string().optional().allow(''),
+  AI_MODEL: Joi.string().default('gpt-4o'),
+  AI_TIMEOUT_MS: Joi.number().integer().min(5000).default(60000),
+  REVIEW_CONCURRENCY: Joi.number().integer().min(1).max(8).default(2),
+  REVIEW_MAX_PER_PIECE_HOUR: Joi.number().integer().min(1).default(10),
+  REVIEW_MONTHLY_QUOTA: Joi.number().integer().min(1).default(100),
+
   // SMTP (Mailpit in development / Gmail or custom SMTP in production)
   SMTP_HOST: Joi.string().default('localhost'),
   SMTP_PORT: Joi.number().default(1025),

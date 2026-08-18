@@ -13,6 +13,7 @@ import { BrandModule } from './modules/brand/brand.module';
 import { AssetModule } from './modules/asset/asset.module';
 import { TemplateModule } from './modules/template/template.module';
 import { PieceModule } from './modules/piece/piece.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { PieceModule } from './modules/piece/piece.module';
     AssetModule,
     TemplateModule,
     PieceModule,
+    ReviewModule,
     RenderModule,
   ],
   controllers: [AppController],
