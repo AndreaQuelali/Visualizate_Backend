@@ -16,6 +16,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, UnrecoverableError } from 'bullmq';
 import {
   AssetKind,
+  Prisma,
   RenderFormat,
   RenderJob,
   RenderStatus,
@@ -31,6 +32,11 @@ import {
   TemplateDocument,
 } from '../template/template-document';
 import { imageAssetIds, validatePieceData } from '../piece/piece-data';
+import {
+  applyOverrides,
+  OverrideProp,
+  sanitizeOverrides,
+} from '../piece/piece-overrides';
 import { documentToHtml, RenderBrand } from './document-to-html';
 import { PlaywrightService } from './playwright.service';
 import {
@@ -83,11 +89,22 @@ export function stableHash(parts: {
   format: RenderFormat;
   scale: number;
   data: Record<string, unknown>;
+  /** Per-piece tweaks (review recommendations); part of what gets rendered. */
+  overrides?: unknown;
   brandUpdatedAt: Date | null;
 }): string {
   const data = Object.keys(parts.data)
     .sort()
     .map((k) => [k, parts.data[k]]);
+  const overrides = sanitizeOverrides(parts.overrides);
+  const overrideEntries = Object.keys(overrides)
+    .sort()
+    .map((id) => [
+      id,
+      Object.keys(overrides[id])
+        .sort()
+        .map((p) => [p, overrides[id][p as OverrideProp]]),
+    ]);
   return createHash('sha256')
     .update(
       JSON.stringify([
@@ -97,6 +114,7 @@ export function stableHash(parts: {
         parts.scale,
         data,
         parts.brandUpdatedAt?.toISOString() ?? null,
+        overrideEntries,
       ]),
     )
     .digest('hex');
@@ -201,6 +219,7 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
       format: dto.format,
       scale,
       data,
+      overrides: piece.overrides,
       brandUpdatedAt: brand?.updatedAt ?? null,
     });
 
@@ -225,6 +244,9 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
         inputHash,
         templateVersionId: piece.templateVersionId,
         inputData: data,
+        inputOverrides: sanitizeOverrides(
+          piece.overrides,
+        ) as Prisma.InputJsonValue,
         requestedById: userId,
       },
     });
@@ -430,38 +452,16 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
         'El documento de la plantilla no es válido',
       );
     }
-    const doc = version.document;
+    const doc = applyOverrides(version.document, job.inputOverrides);
     const data = job.inputData as Record<string, string>;
 
-    const brandKit = await this.prisma.brandKit.findUnique({
-      where: { workspaceId: job.workspaceId },
-    });
-    const brand: RenderBrand = {
-      colors: (brandKit?.colors as RenderBrand['colors'] | undefined) ?? [],
-      fonts: (brandKit?.fonts as RenderBrand['fonts'] | undefined) ?? [],
-    };
-
-    const assetUrls = await this.resolveAssetUrls(job.workspaceId, [
-      ...collectAssetIds(doc),
-      ...imageAssetIds(doc.fields, data),
-      ...brand.fonts.map((f) => f.assetId).filter((id): id is string => !!id),
-    ]);
-
-    const origin = this.storage.getOrigin();
-    const html = documentToHtml(doc, data, {
-      brand,
-      assetUrls,
-      allowedOrigin: origin,
-    });
-
     const format = job.format === RenderFormat.PNG ? 'PNG' : 'PDF';
-    const buffer = await this.playwright.capture({
-      html,
-      width: doc.canvas.width,
-      height: doc.canvas.height,
+    const buffer = await this.renderDocument({
+      workspaceId: job.workspaceId,
+      doc,
+      data,
       format,
       scale: job.scale,
-      allowedOrigins: [origin],
     });
 
     if (format === 'PNG') {
@@ -475,6 +475,50 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
       return { buffer: png, mime: 'image/png', ext: 'png' };
     }
     return { buffer, mime: 'application/pdf', ext: 'pdf' };
+  }
+
+  /**
+   * Renders an in-memory document (overrides already applied) with headless
+   * Chromium. Shared by exports and by the AI review, which needs its own
+   * image of the piece.
+   */
+  async renderDocument(args: {
+    workspaceId: string;
+    doc: TemplateDocument;
+    data: Record<string, string>;
+    format: 'PNG' | 'PDF';
+    scale: number;
+  }): Promise<Buffer> {
+    const { workspaceId, doc, data } = args;
+    const brandKit = await this.prisma.brandKit.findUnique({
+      where: { workspaceId },
+    });
+    const brand: RenderBrand = {
+      colors: (brandKit?.colors as RenderBrand['colors'] | undefined) ?? [],
+      fonts: (brandKit?.fonts as RenderBrand['fonts'] | undefined) ?? [],
+    };
+
+    const assetUrls = await this.resolveAssetUrls(workspaceId, [
+      ...collectAssetIds(doc),
+      ...imageAssetIds(doc.fields, data),
+      ...brand.fonts.map((f) => f.assetId).filter((id): id is string => !!id),
+    ]);
+
+    const origin = this.storage.getOrigin();
+    const html = documentToHtml(doc, data, {
+      brand,
+      assetUrls,
+      allowedOrigin: origin,
+    });
+
+    return this.playwright.capture({
+      html,
+      width: doc.canvas.width,
+      height: doc.canvas.height,
+      format: args.format,
+      scale: args.scale,
+      allowedOrigins: [origin],
+    });
   }
 
   private async resolveAssetUrls(workspaceId: string, ids: string[]) {
