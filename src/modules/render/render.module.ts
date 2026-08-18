@@ -1,10 +1,25 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
+import { StorageModule } from '../../infrastructure/storage/storage.module';
+import { WorkspaceModule } from '../workspace/workspace.module';
+import { PlaywrightService } from './playwright.service';
+import { RenderController } from './render.controller';
+import { RENDER_QUEUE } from './render.constants';
+import { RenderProcessor } from './render.processor';
+import { RenderService } from './render.service';
 
 /**
- * RenderModule — Skeleton for future Playwright + Sharp render engine.
- * Playwright and Sharp are installed as dependencies and ready to use.
- * No implementation yet; wired here so the module is registered and
- * can be expanded without touching AppModule.
+ * Asynchronous PNG/PDF export: HTTP enqueues a RenderJob, a BullMQ worker
+ * renders it with headless Chromium and stores the file in object storage.
  */
-@Module({})
+@Module({
+  imports: [
+    BullModule.registerQueue({ name: RENDER_QUEUE }),
+    StorageModule,
+    WorkspaceModule,
+  ],
+  controllers: [RenderController],
+  providers: [RenderService, RenderProcessor, PlaywrightService],
+  exports: [RenderService],
+})
 export class RenderModule {}

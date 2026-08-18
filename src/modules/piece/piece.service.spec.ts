@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PieceService } from './piece.service';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { StorageService } from '../../infrastructure/storage/storage.service';
 import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 
 const docV1 = {
@@ -17,6 +18,7 @@ describe('PieceService', () => {
   const prisma = {
     template: { findFirst: jest.fn(), findUnique: jest.fn() },
     templateVersion: { findUnique: jest.fn() },
+    renderJob: { findMany: jest.fn().mockResolvedValue([]) },
     piece: {
       create: jest.fn(),
       findFirst: jest.fn(),
@@ -26,6 +28,7 @@ describe('PieceService', () => {
     asset: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const access = { requireMember: jest.fn().mockResolvedValue({}) };
+  const storage = { removeObject: jest.fn().mockResolvedValue(undefined) };
   let service: PieceService;
 
   beforeEach(() => {
@@ -37,6 +40,7 @@ describe('PieceService', () => {
     service = new PieceService(
       prisma as unknown as PrismaService,
       access as unknown as WorkspaceAccessService,
+      storage as unknown as StorageService,
     );
   });
 

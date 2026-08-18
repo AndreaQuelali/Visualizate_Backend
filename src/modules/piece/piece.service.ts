@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AssetKind, Piece, PieceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { StorageService } from '../../infrastructure/storage/storage.service';
 import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import { FieldDef, TemplateDocument } from '../template/template-document';
 import {
@@ -32,6 +33,7 @@ export class PieceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: WorkspaceAccessService,
+    private readonly storage: StorageService,
   ) {}
 
   async create(workspaceId: string, userId: string, dto: CreatePieceDto) {
@@ -218,7 +220,20 @@ export class PieceService {
   async remove(workspaceId: string, userId: string, pieceId: string) {
     await this.access.requireMember(workspaceId, userId);
     await this.getPiece(workspaceId, pieceId);
+
+    // Exported files live in object storage; the rows cascade with the piece.
+    const outputs = await this.prisma.renderJob.findMany({
+      where: { pieceId, outputObjectKey: { not: null } },
+      select: { outputObjectKey: true },
+    });
     await this.prisma.piece.delete({ where: { id: pieceId } });
+    await Promise.all(
+      outputs.map((o) =>
+        this.storage
+          .removeObject(o.outputObjectKey as string)
+          .catch(() => undefined),
+      ),
+    );
     return { message: 'Pieza eliminada' };
   }
 
