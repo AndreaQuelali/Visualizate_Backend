@@ -10,11 +10,8 @@ import { randomUUID } from 'crypto';
 import sharp from 'sharp';
 import { detectFileType, isUnsafeSvg } from '../../common/file-type';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { QuotaService } from '../quota/quota.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
-import {
-  EDITOR_ROLES,
-  WorkspaceAccessService,
-} from '../workspace/workspace-access.service';
 import { collectAssetIds } from '../template/template-document';
 
 export const MAX_ASSET_BYTES = 10 * 1024 * 1024;
@@ -32,7 +29,7 @@ export class AssetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
-    private readonly access: WorkspaceAccessService,
+    private readonly quota: QuotaService,
   ) {}
 
   async upload(
@@ -41,8 +38,6 @@ export class AssetService {
     file: AssetUpload,
     opts: { kind?: AssetKind; name?: string },
   ) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
-
     if (file.size > MAX_ASSET_BYTES) {
       throw new BadRequestException(
         'El archivo supera el tamaño máximo de 10 MB',
@@ -89,6 +84,8 @@ export class AssetService {
       }
     }
 
+    await this.quota.assertStorage(workspaceId, file.size);
+
     const objectKey = `workspaces/${workspaceId}/assets/${randomUUID()}.${detected.ext}`;
     await this.storage.putObject(objectKey, file.buffer, detected.mime);
 
@@ -114,7 +111,6 @@ export class AssetService {
   }
 
   async list(workspaceId: string, userId: string, kind?: AssetKind) {
-    await this.access.requireMember(workspaceId, userId);
     const assets = await this.prisma.asset.findMany({
       where: { workspaceId, ...(kind ? { kind } : {}) },
       orderBy: { createdAt: 'desc' },
@@ -123,7 +119,6 @@ export class AssetService {
   }
 
   async remove(workspaceId: string, userId: string, assetId: string) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const asset = await this.prisma.asset.findFirst({
       where: { id: assetId, workspaceId },
     });

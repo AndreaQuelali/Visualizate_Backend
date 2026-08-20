@@ -25,6 +25,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import {
+  ADMIN_ONLY,
+  WorkspaceRoles,
+  WorkspaceRolesGuard,
+} from './workspace-roles.guard';
 import { WorkspaceService } from './workspace.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
@@ -49,7 +55,7 @@ interface MulterFile {
 
 @ApiTags('workspaces')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard)
 @Controller('workspaces')
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
@@ -85,12 +91,15 @@ export class WorkspaceController {
     return this.workspaceService.acceptInvitation(req.user.id, dto.token);
   }
 
+  @UseGuards(WorkspaceRolesGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Obtener detalle de un espacio de trabajo' })
   findOne(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.workspaceService.findOne(id, req.user.id);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Editar espacio de trabajo (solo ADMIN)' })
   update(
@@ -101,6 +110,8 @@ export class WorkspaceController {
     return this.workspaceService.update(id, req.user.id, dto);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Post(':id/logo')
   @ApiOperation({ summary: 'Subir logo del espacio de trabajo' })
   @ApiConsumes('multipart/form-data')
@@ -135,18 +146,23 @@ export class WorkspaceController {
     return this.workspaceService.uploadLogo(id, req.user.id, payload);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar espacio de trabajo (solo ADMIN)' })
   remove(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.workspaceService.remove(id, req.user.id);
   }
 
+  @UseGuards(WorkspaceRolesGuard)
   @Get(':id/members')
   @ApiOperation({ summary: 'Listar miembros del espacio' })
   listMembers(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.workspaceService.listMembers(id, req.user.id);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Patch(':id/members/:userId/role')
   @ApiOperation({ summary: 'Cambiar rol de un miembro (solo ADMIN)' })
   changeRole(
@@ -158,12 +174,15 @@ export class WorkspaceController {
     return this.workspaceService.changeRole(id, req.user.id, userId, dto);
   }
 
+  @UseGuards(WorkspaceRolesGuard)
   @Delete(':id/members/me')
   @ApiOperation({ summary: 'Abandonar el espacio de trabajo' })
   leave(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.workspaceService.leave(id, req.user.id);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Delete(':id/members/:userId')
   @ApiOperation({ summary: 'Eliminar un miembro (solo ADMIN)' })
   removeMember(
@@ -174,6 +193,8 @@ export class WorkspaceController {
     return this.workspaceService.removeMember(id, req.user.id, userId);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Post(':id/invitations')
   @ApiOperation({ summary: 'Invitar un miembro al espacio' })
   invite(
@@ -184,12 +205,16 @@ export class WorkspaceController {
     return this.workspaceService.invite(id, req.user.id, dto);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Get(':id/invitations')
   @ApiOperation({ summary: 'Listar invitaciones pendientes' })
   listInvitations(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.workspaceService.listInvitations(id, req.user.id);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Post(':id/invitations/:invId/resend')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reenviar invitación pendiente' })
@@ -201,6 +226,8 @@ export class WorkspaceController {
     return this.workspaceService.resendInvitation(id, req.user.id, invId);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
+  @UseGuards(WorkspaceRolesGuard)
   @Delete(':id/invitations/:invId')
   @ApiOperation({ summary: 'Cancelar invitación pendiente' })
   cancelInvitation(

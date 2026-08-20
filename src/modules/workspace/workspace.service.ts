@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
@@ -20,6 +21,8 @@ import { ChangeRoleDto } from './dto/change-role.dto';
 
 @Injectable()
 export class WorkspaceService {
+  private readonly logger = new Logger(WorkspaceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
@@ -156,7 +159,12 @@ export class WorkspaceService {
 
   async remove(workspaceId: string, userId: string) {
     await this.requireAdmin(workspaceId, userId);
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { logoUrl: true },
+    });
     await this.prisma.workspace.delete({ where: { id: workspaceId } });
+    await this.purgeStorage(workspaceId, workspace?.logoUrl ?? null);
     return { message: 'Espacio de trabajo eliminado' };
   }
 
@@ -519,6 +527,21 @@ export class WorkspaceService {
     ]);
 
     return this.findOne(invitation.workspaceId, userId);
+  }
+
+  /**
+   * Deletes the workspace's assets, renders and logo from object storage. The
+   * database rows are already gone, so a storage failure is logged, not thrown.
+   */
+  private async purgeStorage(workspaceId: string, logoUrl: string | null) {
+    try {
+      await this.storage.removePrefix(`workspaces/${workspaceId}/`);
+      if (logoUrl) await this.storage.removeByUrl(logoUrl);
+    } catch (err) {
+      this.logger.error(
+        `No se pudo limpiar el almacenamiento del espacio ${workspaceId}: ${String(err)}`,
+      );
+    }
   }
 
   private async requireMembership(workspaceId: string, userId: string) {

@@ -1,7 +1,5 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { WorkspaceRole } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
 import { TemplateService } from './template.service';
-import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { createBlankDocument } from './template-document';
 
@@ -20,11 +18,6 @@ describe('TemplateService', () => {
     asset: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
-  const member = { role: WorkspaceRole.DESIGNER };
-  const access = {
-    requireMember: jest.fn().mockResolvedValue(member),
-    requireRole: jest.fn().mockResolvedValue(member),
-  };
   let service: TemplateService;
 
   beforeEach(() => {
@@ -37,10 +30,7 @@ describe('TemplateService', () => {
       name: 'T',
       status: 'DRAFT',
     });
-    service = new TemplateService(
-      prisma as unknown as PrismaService,
-      access as unknown as WorkspaceAccessService,
-    );
+    service = new TemplateService(prisma as unknown as PrismaService);
   });
 
   it('updates the open draft in place instead of creating a version', async () => {
@@ -102,12 +92,5 @@ describe('TemplateService', () => {
     await expect(service.publish('w1', 'u1', 't1')).rejects.toThrow(
       'No hay cambios por publicar',
     );
-  });
-
-  it('propagates the role check failure for write operations', async () => {
-    access.requireRole.mockRejectedValueOnce(new ForbiddenException());
-    await expect(
-      service.create('w1', 'u1', { name: 'X' }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

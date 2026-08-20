@@ -252,6 +252,7 @@ model Piece {
   reviews           Review[]
 
   @@index([workspaceId, status])
+  @@index([workspaceId, updatedAt])
   @@map("pieces")
 }
 
@@ -280,6 +281,8 @@ model RenderJob {
 
   @@index([workspaceId, pieceId, createdAt])
   @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, pieceId, status])
   @@index([pieceId, inputHash])
   @@map("render_jobs")
 }
@@ -325,5 +328,6 @@ model ReviewItem {
   review      Review           @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@index([reviewId])
+  @@index([reviewId, status])
   @@map("review_items")
 }

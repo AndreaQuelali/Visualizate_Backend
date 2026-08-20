@@ -3,7 +3,6 @@ import { Queue } from 'bullmq';
 import sharp from 'sharp';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import { RenderLimitException, RenderService } from '../render/render.service';
 import {
   createBlankDocument,
@@ -75,10 +74,6 @@ describe('ReviewService', () => {
     brandKit: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
-  const access = {
-    requireMember: jest.fn(),
-    requireRole: jest.fn(),
-  };
   const render = { renderDocument: jest.fn() };
   const config = { get: jest.fn((_k: string, d: unknown) => d) };
   const ai = { isConfigured: jest.fn(), review: jest.fn() };
@@ -104,7 +99,6 @@ describe('ReviewService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    access.requireMember.mockResolvedValue({ role: 'ORGANIZER' });
     config.get.mockImplementation((_k: string, d: unknown) => d);
     ai.isConfigured.mockReturnValue(false);
     prisma.$transaction.mockImplementation((ops: Promise<unknown>[]) =>
@@ -120,7 +114,6 @@ describe('ReviewService', () => {
     prisma.brandKit.findUnique.mockResolvedValue(null);
     service = new ReviewService(
       prisma as unknown as PrismaService,
-      access as unknown as WorkspaceAccessService,
       render as unknown as RenderService,
       config as unknown as ConfigService,
       ai,

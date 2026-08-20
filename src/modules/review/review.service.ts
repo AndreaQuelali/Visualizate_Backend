@@ -19,11 +19,10 @@ import {
   ReviewItem,
   ReviewItemStatus,
   ReviewStatus,
-  WorkspaceRole,
 } from '@prisma/client';
 import sharp from 'sharp';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import { WorkspaceAccessService } from '../workspace/workspace-access.service';
+import { recordAiReview } from '../../infrastructure/observability/metrics';
 import { RenderLimitException, RenderService } from '../render/render.service';
 import type { Layer, TemplateDocument } from '../template/template-document';
 import { validatePieceData } from '../piece/piece-data';
@@ -73,7 +72,6 @@ export class ReviewService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly access: WorkspaceAccessService,
     private readonly render: RenderService,
     private readonly config: ConfigService,
     @Inject(AI_REVIEW_PROVIDER) private readonly ai: AiReviewProvider,
@@ -81,6 +79,7 @@ export class ReviewService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    if (!this.config.get<boolean>('RUN_WORKERS', true)) return;
     try {
       const orphans = await this.prisma.review.updateMany({
         where: { status: ReviewStatus.RUNNING },
@@ -102,8 +101,7 @@ export class ReviewService implements OnModuleInit {
 
   // ─── settings ───────────────────────────────────────────────────────────
 
-  async getSettings(workspaceId: string, userId: string) {
-    await this.access.requireMember(workspaceId, userId);
+  async getSettings(workspaceId: string) {
     const ws = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { aiReviewEnabled: true },
@@ -115,23 +113,17 @@ export class ReviewService implements OnModuleInit {
     };
   }
 
-  async updateSettings(
-    workspaceId: string,
-    userId: string,
-    aiEnabled: boolean,
-  ) {
-    await this.access.requireRole(workspaceId, userId, [WorkspaceRole.ADMIN]);
+  async updateSettings(workspaceId: string, aiEnabled: boolean) {
     await this.prisma.workspace.update({
       where: { id: workspaceId },
       data: { aiReviewEnabled: aiEnabled },
     });
-    return this.getSettings(workspaceId, userId);
+    return this.getSettings(workspaceId);
   }
 
   // ─── requests ───────────────────────────────────────────────────────────
 
   async request(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const piece = await this.prisma.piece.findFirst({
       where: { id: pieceId, workspaceId },
     });
@@ -192,7 +184,6 @@ export class ReviewService implements OnModuleInit {
   }
 
   async get(workspaceId: string, userId: string, reviewId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const review = await this.prisma.review.findFirst({
       where: { id: reviewId, workspaceId },
       include: { items: true },
@@ -202,7 +193,6 @@ export class ReviewService implements OnModuleInit {
   }
 
   async listForPiece(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const reviews = await this.prisma.review.findMany({
       where: { workspaceId, pieceId },
       orderBy: { createdAt: 'desc' },
@@ -350,9 +340,11 @@ export class ReviewService implements OnModuleInit {
         .png()
         .toBuffer();
 
+      const aiStarted = Date.now();
       const result = await this.ai.review(
         this.buildAiInput(image, doc, data, brand, ruleFindings),
       );
+      recordAiReview('OK', Date.now() - aiStarted);
       const norm = normalizeAiOutput(result.output, {
         doc,
         overrides,
@@ -371,7 +363,13 @@ export class ReviewService implements OnModuleInit {
     } catch (err) {
       const message =
         err instanceof AiError ? err.message : 'No se pudo consultar a la IA';
-      this.logger.warn(`IA no disponible para ${review.id}: ${message}`);
+      recordAiReview('FAILED', 0);
+      this.logger.warn({
+        msg: 'AI review unavailable',
+        reviewId: review.id,
+        workspaceId: review.workspaceId,
+        reason: message,
+      });
       return { ...none, status: 'FAILED', error: message };
     }
   }
@@ -432,7 +430,6 @@ export class ReviewService implements OnModuleInit {
   // ─── decisions ──────────────────────────────────────────────────────────
 
   async apply(workspaceId: string, userId: string, itemId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const item = await this.getItem(workspaceId, itemId);
     if (item.status !== ReviewItemStatus.PENDING) {
       throw new ConflictException(
@@ -504,7 +501,6 @@ export class ReviewService implements OnModuleInit {
   }
 
   async revert(workspaceId: string, userId: string, itemId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const item = await this.getItem(workspaceId, itemId);
     if (item.status !== ReviewItemStatus.APPLIED) {
       throw new ConflictException('Esta recomendación no está aplicada');
@@ -561,7 +557,6 @@ export class ReviewService implements OnModuleInit {
   }
 
   async dismiss(workspaceId: string, userId: string, itemId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const item = await this.getItem(workspaceId, itemId);
     if (item.status !== ReviewItemStatus.PENDING) {
       throw new ConflictException('Esta recomendación ya fue resuelta');
@@ -584,7 +579,6 @@ export class ReviewService implements OnModuleInit {
     reviewId: string,
     itemIds: string[],
   ) {
-    await this.access.requireMember(workspaceId, userId);
     const review = await this.prisma.review.findFirst({
       where: { id: reviewId, workspaceId },
       select: { id: true },

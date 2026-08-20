@@ -13,6 +13,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import {
+  WorkspaceRolesGuard,
+  WorkspaceRoles,
+  ADMIN_ONLY,
+} from '../workspace/workspace-roles.guard';
 import { RenderLimitFilter } from '../render/render-limit.filter';
 import { ApplyManyDto, UpdateReviewSettingsDto } from './dto/review.dto';
 import { ReviewService } from './review.service';
@@ -23,7 +29,7 @@ interface RequestWithUser {
 
 @ApiTags('reviews')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard, WorkspaceRolesGuard)
 @UseFilters(RenderLimitFilter)
 @Controller('workspaces/:id')
 export class ReviewController {
@@ -32,9 +38,10 @@ export class ReviewController {
   @Get('review-settings')
   @ApiOperation({ summary: 'Ajustes de la revisión con IA del espacio' })
   getSettings(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.reviews.getSettings(id, req.user.id);
+    return this.reviews.getSettings(id);
   }
 
+  @WorkspaceRoles(...ADMIN_ONLY)
   @Put('review-settings')
   @ApiOperation({ summary: 'Activar o desactivar la IA del espacio (ADMIN)' })
   updateSettings(
@@ -42,7 +49,7 @@ export class ReviewController {
     @Param('id') id: string,
     @Body() dto: UpdateReviewSettingsDto,
   ) {
-    return this.reviews.updateSettings(id, req.user.id, dto.aiEnabled);
+    return this.reviews.updateSettings(id, dto.aiEnabled);
   }
 
   @Post('pieces/:pieceId/reviews')

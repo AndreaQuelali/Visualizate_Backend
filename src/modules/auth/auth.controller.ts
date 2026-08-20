@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -31,11 +32,15 @@ interface RequestWithUser extends Request {
   };
 }
 
+/** Public endpoints are limited per IP to slow down credential stuffing. */
+const PublicLimit = Throttle({ ip: { limit: 10, ttl: 60_000 } });
+
 @ApiTags('autenticacion')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @PublicLimit
   @Post('register')
   @ApiOperation({ summary: 'Registrar un nuevo usuario' })
   @ApiResponse({ status: 201, description: 'Usuario creado exitosamente.' })
@@ -47,6 +52,7 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @PublicLimit
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión con correo y contraseña' })
@@ -59,6 +65,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @PublicLimit
   @Get('verify-email')
   @ApiOperation({ summary: 'Verificar el correo del usuario mediante token' })
   @ApiResponse({ status: 200, description: 'Correo verificado correctamente.' })
@@ -67,6 +74,7 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
+  @PublicLimit
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicitar enlace para restablecer contraseña' })
@@ -78,6 +86,7 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @PublicLimit
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Restablecer contraseña mediante token' })

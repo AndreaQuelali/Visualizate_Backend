@@ -14,6 +14,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import {
+  WorkspaceRolesGuard,
+  WorkspaceRoles,
+  EDITORS,
+} from '../workspace/workspace-roles.guard';
 import { TemplateService } from './template.service';
 import {
   CreateTemplateDto,
@@ -28,7 +34,7 @@ interface RequestWithUser {
 
 @ApiTags('templates')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard, WorkspaceRolesGuard)
 @Controller('workspaces/:id/templates')
 export class TemplateController {
   constructor(private readonly templates: TemplateService) {}
@@ -43,6 +49,7 @@ export class TemplateController {
     return this.templates.list(id, req.user.id, query);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Post()
   @ApiOperation({ summary: 'Crear plantilla (ADMIN o DESIGNER)' })
   create(
@@ -63,6 +70,7 @@ export class TemplateController {
     return this.templates.findOne(id, req.user.id, tplId);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Patch(':tplId')
   @ApiOperation({ summary: 'Renombrar, describir, archivar o restaurar' })
   update(
@@ -74,6 +82,7 @@ export class TemplateController {
     return this.templates.update(id, req.user.id, tplId, dto);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Delete(':tplId')
   @ApiOperation({ summary: 'Eliminar plantilla' })
   remove(
@@ -84,6 +93,7 @@ export class TemplateController {
     return this.templates.remove(id, req.user.id, tplId);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Post(':tplId/versions')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -99,6 +109,7 @@ export class TemplateController {
     return this.templates.saveDraft(id, req.user.id, tplId, dto.document);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Post(':tplId/publish')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Publicar el borrador como versión inmutable' })
@@ -110,6 +121,7 @@ export class TemplateController {
     return this.templates.publish(id, req.user.id, tplId);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Post(':tplId/duplicate')
   @ApiOperation({ summary: 'Duplicar plantilla' })
   duplicate(
