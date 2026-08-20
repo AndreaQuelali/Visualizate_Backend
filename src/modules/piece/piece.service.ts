@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { AssetKind, Piece, PieceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { QuotaService } from '../quota/quota.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
-import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import { FieldDef, TemplateDocument } from '../template/template-document';
 import {
   FieldError,
@@ -32,13 +32,12 @@ const fieldsOf = (document: unknown): FieldDef[] => {
 export class PieceService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly access: WorkspaceAccessService,
     private readonly storage: StorageService,
+    private readonly quota: QuotaService,
   ) {}
 
   async create(workspaceId: string, userId: string, dto: CreatePieceDto) {
-    await this.access.requireMember(workspaceId, userId);
-
+    await this.quota.assertActivePieces(workspaceId);
     const template = await this.prisma.template.findFirst({
       where: { id: dto.templateId, workspaceId },
     });
@@ -70,7 +69,6 @@ export class PieceService {
   }
 
   async list(workspaceId: string, userId: string, q: ListPiecesQueryDto) {
-    await this.access.requireMember(workspaceId, userId);
     const pieces = await this.prisma.piece.findMany({
       where: {
         workspaceId,
@@ -95,7 +93,6 @@ export class PieceService {
   }
 
   async findOne(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const piece = await this.prisma.piece.findFirst({
       where: { id: pieceId, workspaceId },
       include: {
@@ -122,7 +119,6 @@ export class PieceService {
     pieceId: string,
     dto: UpdatePieceDto,
   ) {
-    await this.access.requireMember(workspaceId, userId);
     const piece = await this.getPiece(workspaceId, pieceId);
     const newStatus = dto.status ?? piece.status;
 
@@ -163,7 +159,6 @@ export class PieceService {
   }
 
   async upgrade(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const piece = await this.getPiece(workspaceId, pieceId);
     if (piece.status === PieceStatus.ARCHIVED) {
       throw new ConflictException('La pieza está archivada');
@@ -218,7 +213,6 @@ export class PieceService {
   }
 
   async remove(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     await this.getPiece(workspaceId, pieceId);
 
     // Exported files live in object storage; the rows cascade with the piece.

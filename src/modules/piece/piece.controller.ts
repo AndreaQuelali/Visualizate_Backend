@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import { WorkspaceRolesGuard } from '../workspace/workspace-roles.guard';
 import { PieceService } from './piece.service';
 import {
   CreatePieceDto,
@@ -27,7 +29,7 @@ interface RequestWithUser {
 
 @ApiTags('pieces')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard, WorkspaceRolesGuard)
 @Controller('workspaces/:id/pieces')
 export class PieceController {
   constructor(private readonly pieces: PieceService) {}

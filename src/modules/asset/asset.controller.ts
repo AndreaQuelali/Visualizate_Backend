@@ -22,6 +22,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import {
+  WorkspaceRolesGuard,
+  WorkspaceRoles,
+  EDITORS,
+} from '../workspace/workspace-roles.guard';
 import { AssetService, MAX_ASSET_BYTES } from './asset.service';
 import { ListAssetsQueryDto, UploadAssetDto } from './dto/asset.dto';
 
@@ -37,11 +43,12 @@ interface MulterFile {
 
 @ApiTags('assets')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard, WorkspaceRolesGuard)
 @Controller('workspaces/:id/assets')
 export class AssetController {
   constructor(private readonly assets: AssetService) {}
 
+  @WorkspaceRoles(...EDITORS)
   @Post()
   @ApiOperation({ summary: 'Subir un asset (ADMIN o DESIGNER)' })
   @ApiConsumes('multipart/form-data')
@@ -81,6 +88,7 @@ export class AssetController {
     return this.assets.list(id, req.user.id, query.kind);
   }
 
+  @WorkspaceRoles(...EDITORS)
   @Delete(':assetId')
   @ApiOperation({ summary: 'Eliminar un asset (409 si está en uso)' })
   remove(

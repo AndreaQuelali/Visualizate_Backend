@@ -7,10 +7,6 @@ import {
 import { Prisma, TemplateStatus } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
-  EDITOR_ROLES,
-  WorkspaceAccessService,
-} from '../workspace/workspace-access.service';
-import {
   createBlankDocument,
   collectAssetIds,
   DocumentContext,
@@ -29,17 +25,13 @@ interface BrandRef {
 
 @Injectable()
 export class TemplateService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly access: WorkspaceAccessService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async list(
     workspaceId: string,
     userId: string,
     query: ListTemplatesQueryDto,
   ) {
-    await this.access.requireMember(workspaceId, userId);
     const templates = await this.prisma.template.findMany({
       where: {
         workspaceId,
@@ -69,7 +61,6 @@ export class TemplateService {
   }
 
   async create(workspaceId: string, userId: string, dto: CreateTemplateDto) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const document = dto.document ?? createBlankDocument();
     await this.assertValid(workspaceId, document, 'draft');
 
@@ -96,7 +87,6 @@ export class TemplateService {
   }
 
   async findOne(workspaceId: string, userId: string, templateId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const template = await this.getTemplate(workspaceId, templateId);
     const versions = await this.prisma.templateVersion.findMany({
       where: { templateId },
@@ -130,7 +120,6 @@ export class TemplateService {
     templateId: string,
     dto: UpdateTemplateDto,
   ) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const template = await this.getTemplate(workspaceId, templateId);
 
     const data: Prisma.TemplateUpdateInput = {};
@@ -155,7 +144,6 @@ export class TemplateService {
     templateId: string,
     document: Record<string, unknown>,
   ) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const template = await this.getTemplate(workspaceId, templateId);
     if (template.status === TemplateStatus.ARCHIVED) {
       throw new ConflictException('La plantilla está archivada');
@@ -203,7 +191,6 @@ export class TemplateService {
   }
 
   async publish(workspaceId: string, userId: string, templateId: string) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const template = await this.getTemplate(workspaceId, templateId);
     if (template.status === TemplateStatus.ARCHIVED) {
       throw new ConflictException('La plantilla está archivada');
@@ -231,7 +218,6 @@ export class TemplateService {
   }
 
   async duplicate(workspaceId: string, userId: string, templateId: string) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     const source = await this.getTemplate(workspaceId, templateId);
     const latest = await this.latestVersion(templateId);
     const document = (latest?.document ??
@@ -260,7 +246,6 @@ export class TemplateService {
   }
 
   async remove(workspaceId: string, userId: string, templateId: string) {
-    await this.access.requireRole(workspaceId, userId, EDITOR_ROLES);
     await this.getTemplate(workspaceId, templateId);
     try {
       await this.prisma.template.delete({ where: { id: templateId } });

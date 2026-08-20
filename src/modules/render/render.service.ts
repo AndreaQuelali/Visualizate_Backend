@@ -24,6 +24,8 @@ import {
 } from '@prisma/client';
 import sharp from 'sharp';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { QuotaService } from '../quota/quota.service';
+import { recordRender } from '../../infrastructure/observability/metrics';
 import { StorageService } from '../../infrastructure/storage/storage.service';
 import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import {
@@ -132,21 +134,26 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
     private readonly playwright: PlaywrightService,
     private readonly config: ConfigService,
     @InjectQueue(RENDER_QUEUE) private readonly queue: Queue,
+    private readonly quota: QuotaService,
   ) {}
 
   // ─── lifecycle ──────────────────────────────────────────────────────────
 
   async onModuleInit() {
+    const runsWorkers = this.config.get<boolean>('RUN_WORKERS', true);
     try {
-      const orphans = await this.prisma.renderJob.updateMany({
-        where: { status: RenderStatus.RUNNING },
-        data: {
-          status: RenderStatus.FAILED,
-          errorCode: 'WORKER_LOST',
-          errorMessage: 'El proceso de render se reinició durante el trabajo',
-          finishedAt: new Date(),
-        },
-      });
+      const orphans = runsWorkers
+        ? await this.prisma.renderJob.updateMany({
+            where: { status: RenderStatus.RUNNING },
+            data: {
+              status: RenderStatus.FAILED,
+              errorCode: 'WORKER_LOST',
+              errorMessage:
+                'El proceso de render se reinició durante el trabajo',
+              finishedAt: new Date(),
+            },
+          })
+        : { count: 0 };
       if (orphans.count > 0) {
         this.logger.warn(`${orphans.count} trabajos huérfanos marcados FAILED`);
       }
@@ -174,8 +181,6 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
     pieceId: string,
     dto: { format: RenderFormat; scale?: number },
   ) {
-    await this.access.requireMember(workspaceId, userId);
-
     const piece = await this.prisma.piece.findFirst({
       where: { id: pieceId, workspaceId },
       include: { templateVersion: { select: { document: true } } },
@@ -233,6 +238,7 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
     });
     if (existing) return { job: this.present(existing), reused: true };
 
+    await this.quota.assertMonthlyRenders(workspaceId);
     await this.enforceLimits(workspaceId);
 
     const job = await this.prisma.renderJob.create({
@@ -282,12 +288,10 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get(workspaceId: string, userId: string, jobId: string) {
-    await this.access.requireMember(workspaceId, userId);
     return this.present(await this.getJob(workspaceId, jobId));
   }
 
   async listForPiece(workspaceId: string, userId: string, pieceId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const jobs = await this.prisma.renderJob.findMany({
       where: { workspaceId, pieceId },
       orderBy: { createdAt: 'desc' },
@@ -297,7 +301,6 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
   }
 
   async download(workspaceId: string, userId: string, jobId: string) {
-    await this.access.requireMember(workspaceId, userId);
     const job = await this.prisma.renderJob.findFirst({
       where: { id: jobId, workspaceId },
       include: { piece: { select: { title: true } } },
@@ -384,6 +387,15 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
       if (done.count === 0) {
         // Cancelled while rendering: discard the output.
         await this.storage.removeObject(key).catch(() => undefined);
+      } else {
+        recordRender(job.format, 'SUCCEEDED', Date.now() - started);
+        this.logger.log({
+          msg: 'Render completed',
+          jobId: job.id,
+          workspaceId: job.workspaceId,
+          format: job.format,
+          durationMs: Date.now() - started,
+        });
       }
     } catch (err) {
       const re = this.toRenderError(err);
@@ -407,6 +419,13 @@ export class RenderService implements OnModuleInit, OnModuleDestroy {
           durationMs: Date.now() - started,
           finishedAt: new Date(),
         },
+      });
+      recordRender(job.format, 'FAILED', Date.now() - started);
+      this.logger.error({
+        msg: 'Render failed',
+        jobId: job.id,
+        workspaceId: job.workspaceId,
+        errorCode: re.code,
       });
       throw new UnrecoverableError(re.message);
     }

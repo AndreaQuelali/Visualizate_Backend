@@ -15,6 +15,7 @@ import { createBlankDocument } from '../template/template-document';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
 import { WorkspaceAccessService } from '../workspace/workspace-access.service';
+import { QuotaService } from '../quota/quota.service';
 import { PlaywrightService } from './playwright.service';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
@@ -55,6 +56,7 @@ describe('RenderService', () => {
     get: jest.fn((_k: string, d: unknown) => d),
   };
   const queue = { add: jest.fn(), getJob: jest.fn() };
+  const quota = { assertMonthlyRenders: jest.fn() };
   let service: RenderService;
 
   const readyPiece = (overrides: object = {}) => ({
@@ -69,6 +71,7 @@ describe('RenderService', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     access.requireMember.mockResolvedValue({ role: 'ORGANIZER' });
+    quota.assertMonthlyRenders.mockResolvedValue(undefined);
     config.get.mockImplementation((_k: string, d: unknown) => d);
     storage.getOrigin.mockReturnValue('http://minio:9000');
     storage.removeObject.mockResolvedValue(undefined);
@@ -89,6 +92,7 @@ describe('RenderService', () => {
       playwright as unknown as PlaywrightService,
       config as unknown as ConfigService,
       queue as unknown as Queue,
+      quota as unknown as QuotaService,
     );
   });
 

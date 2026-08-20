@@ -86,6 +86,30 @@ export class StorageService {
     await this.client.removeObject(this.bucket, key);
   }
 
+  /** Throws when the object store is unreachable (used by /health). */
+  async ping(): Promise<void> {
+    await this.client.bucketExists(this.bucket);
+  }
+
+  /** Removes every object under a prefix and returns how many were deleted. */
+  async removePrefix(prefix: string): Promise<number> {
+    const keys: string[] = [];
+    const stream = this.client.listObjectsV2(this.bucket, prefix, true);
+    for await (const obj of stream as AsyncIterable<{ name?: string }>) {
+      if (obj.name) keys.push(obj.name);
+    }
+    if (keys.length > 0) await this.client.removeObjects(this.bucket, keys);
+    return keys.length;
+  }
+
+  /** Removes the object an URL created by `uploadFile` points to. */
+  async removeByUrl(url: string): Promise<void> {
+    const marker = `/${this.bucket}/`;
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+    await this.removeObject(url.slice(idx + marker.length));
+  }
+
   /**
    * Short-lived signed URL for reading a private object.
    * `responseHeaders` lets the caller force e.g. a download filename.

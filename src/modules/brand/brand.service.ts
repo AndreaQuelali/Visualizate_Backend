@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { AssetKind, WorkspaceRole } from '@prisma/client';
+import { AssetKind } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
-import { WorkspaceAccessService } from '../workspace/workspace-access.service';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 
 @Injectable()
@@ -11,20 +10,16 @@ export class BrandService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
-    private readonly access: WorkspaceAccessService,
   ) {}
 
-  async get(workspaceId: string, userId: string) {
-    await this.access.requireMember(workspaceId, userId);
+  async get(workspaceId: string) {
     const kit = await this.prisma.brandKit.findUnique({
       where: { workspaceId },
     });
     return this.present(workspaceId, kit);
   }
 
-  async update(workspaceId: string, userId: string, dto: UpdateBrandDto) {
-    await this.access.requireRole(workspaceId, userId, [WorkspaceRole.ADMIN]);
-
+  async update(workspaceId: string, dto: UpdateBrandDto) {
     const colors = dto.colors.map((c) => ({ ...c, id: c.id ?? randomUUID() }));
     const fonts = dto.fonts.map((f) => ({ ...f, id: f.id ?? randomUUID() }));
 

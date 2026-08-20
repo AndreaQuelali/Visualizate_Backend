@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserThrottlerGuard } from '../../common/throttler.guards';
+import { WorkspaceRolesGuard } from '../workspace/workspace-roles.guard';
 import { RequestRenderDto } from './dto/render.dto';
 import { RenderLimitFilter } from './render-limit.filter';
 import { RenderService } from './render.service';
@@ -22,7 +24,7 @@ interface RequestWithUser {
 
 @ApiTags('render')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UserThrottlerGuard, WorkspaceRolesGuard)
 @UseFilters(RenderLimitFilter)
 @Controller('workspaces/:id')
 export class RenderController {
